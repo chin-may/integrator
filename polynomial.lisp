@@ -1,6 +1,6 @@
 (defun integrate (expr var)
   (cond ((numberp expr)
-            `(* ,expr ,var)) 
+         `(* ,expr ,var)) 
         ((symbolp expr)
          `(/ (^ ,expr 2) 2)
          )
@@ -18,6 +18,79 @@
         )
   )
 
-(defun isPow (expr var)
-  (and (eq (car expr) '^) (eq (cadr expr) var) (numberp (caddr expr)))
+(defun isPow (expr dvar)
+  (and (eq (car expr) '^) (eq (cadr expr) dvar) (numberp (caddr expr)))
+  )
+
+(defun isAdd (expr)
+  (eq '+ (car expr)))
+
+(defun isProd (expr)
+  (eq '* (car expr)))
+
+(defun differentiate (expr dvar)
+  (cond 
+    ((numberp expr) 0)
+    ((symbolp expr) 1)
+    ((isAdd expr) (make-sum (differentiate (cadr expr) dvar) (differentiate (caddr expr) dvar)))
+    ((isProd expr) 
+     (make-sum 
+       (make-prod (multiplier expr) (differentiate (multiplicand expr) dvar))
+       (make-prod (multiplicand expr) (differentiate (multiplier expr) dvar))
+       )
+     )
+    ((isPow expr dvar) (make-prod (make-pow (base expr) (- (exponent expr) 1))(exponent expr)))
+    )
+  )
+
+(defun multiplier (expr)
+  (cadr expr)
+  )
+
+(defun multiplicand (expr)
+  (caddr expr)
+  )
+
+(defun base (expr)
+  (cadr expr)
+  )
+
+(defun exponent (expr)
+  (caddr expr)
+  )
+
+(defun make-sum (l r)
+  (cond 
+    ((and (numberp l) (numberp r))
+     (+ l r))
+    ((eq 0 l) r) 
+    ((eq 0 r) l) 
+    (T (list '+ l r)) 
+    ) 
+  )
+
+(defun make-prod (l r)
+  (cond ((or (eq 0 l) (eq 0 r)) 0)
+        ((eq 1 l) r)
+        ((eq 1 r) l)
+        ((and (numberp l) (numberp r)) (* l r))
+        (T (list '* l r))
+        )
+  )
+
+(defun make-pow (base exp)
+  (cond 
+    ((eq 0 exp) 1)
+    ((eq 1 exp) base)
+    (T (list '^ base exp))
+    )
+  )
+
+(defun make-div (num den)
+  (cond 
+    ((eq 0 num) 0)
+    ((eq 1 den) num)
+    ((eq 0 den) nil)
+    (T (list '/ num den))
+    )
   )
