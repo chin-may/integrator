@@ -1,21 +1,32 @@
-(defun integrate (expr var)
-  (cond ((numberp expr)
-         `(* ,expr ,var)) 
-        ((symbolp expr)
-         `(/ (^ ,expr 2) 2)
-         )
-        ((isPow expr var)
-         `(/ (,(car expr) ,(cadr expr) ,(+ 1 (caddr expr))) ,(+ 1 (caddr expr)))
-         ) 
-        ((eq '+ (car expr))
-         `(+ ,(integrate (cadr expr) var) ,(integrate (caddr expr) var))
-         )
-        ((eq '* (car expr))
-         (if (numberp (caddr expr))
-           `(*  ,(integrate (cadr expr) var) ,(caddr expr))
-           )
-         )
-        )
+(defun integrate (expr dvar)
+  (cond 
+    ((numberp expr) (make-prod expr dvar))
+    ((symbolp expr) (make-div (make-pow expr 2) 2))
+    ((isPow expr dvar) 
+     (make-div (make-pow dvar (+ (exponent expr) 1)) (+ (exponent expr) 1))
+     )
+    ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
+    ((isProd expr)
+     (cond 
+       ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
+       ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
+       (T (make-sub
+            (make-prod (caddr expr) (integrate (cadr expr) dvar))
+            (integrate 
+              (make-prod 
+                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
+       )
+     )
+    ((isDiv expr)
+     (if (numberp (divisor expr))
+       (make-div (integrate (dividend expr) dvar) (divisor expr))
+       )
+     )
+    )
+  )
+
+(defun isDiv (expr)
+  (eq '/ (car expr))
   )
 
 (defun isPow (expr dvar)
@@ -59,6 +70,14 @@
   (caddr expr)
   )
 
+(defun divisor (expr)
+  (caddr expr)
+  )
+
+(defun dividend (expr)
+  (cadr expr)
+  )
+
 (defun make-sum (l r)
   (cond 
     ((and (numberp l) (numberp r))
@@ -66,6 +85,16 @@
     ((eq 0 l) r) 
     ((eq 0 r) l) 
     (T (list '+ l r)) 
+    ) 
+  )
+
+(defun make-sub (l r)
+  (cond 
+    ((and (numberp l) (numberp r))
+     (- l r))
+    ((eq 0 l) (- r)) 
+    ((eq 0 r) l) 
+    (T (list '- l r)) 
     ) 
   )
 
@@ -92,5 +121,11 @@
     ((eq 1 den) num)
     ((eq 0 den) nil)
     (T (list '/ num den))
+    )
+  )
+
+(defun inprint (expr)
+  (if (atom expr) (print expr)
+    (and (print (cadr expr)) (inprint (car expr)) (inprint (caddr expr)))
     )
   )
