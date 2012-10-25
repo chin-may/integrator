@@ -9,6 +9,10 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
+    ((and (isProd expr) (numberp (cadr expr))) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
+    ((and (isProd expr) (numberp (caddr expr))) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
+    ;((and (isDiv expr) (numberp (divisor expr))) (make-div (integrate (dividend expr) dvar) (divisor expr)))
+        
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr)) 
@@ -70,7 +74,8 @@
                                (deriv-divides factor x-factors dvar))
                            x-factors))
                     (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
-     
+    
+    ;;The lines below in this function are not really needed any more actually 
     ((isProd expr)
      (cond 
        ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
@@ -82,8 +87,6 @@
                 (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
        )
      )
-     
-    
     )
   )
 
@@ -150,6 +153,7 @@
      )
     )
   )
+  
 
 (defun partition-if (pred lst)
 "Return 2 values: elements of list that satisfy pred,
@@ -389,15 +393,16 @@
   where each factor is of the form (^ y n)."
   (let ((factors nil)
         (constant 1))
+    ;; The 
     (labels
       ((fac (x n)
          (cond
            ((numberp x) (setf constant (* constant (expt x n))))
-           ((starts-with x '*) (fac (cadr  x) n) (fac (caddr x) n))
+           ((starts-with x '*) (fac (cadr x) n) (fac (caddr x) n))
            ((starts-with x '/)
             (fac (cadr x) n)
             (fac (caddr x) (- n)))
-           ((and (starts-with x '-) (eq (length (rest 1)) 1))
+           ((and (starts-with x '-) (and (consp (rest x)) (null (cdr (cdr x)))))
             (setf constant (- constant))
             (fac (cadr x) n))
            ((and (starts-with x '^) (numberp (caddr x)))
@@ -408,11 +413,12 @@
                     (incf (caddr factor) n)
                     (push `(^ ,x ,n) factors)))))))
       
+      
       (fac expr 1)
       (case constant
         (0 '((^ 0 1)))
         (1 factors)
-        (t `(,constant .,factors))))))
+        (t `( ( ^ ,constant 1) .,factors))))))
 
 
 (defun unfactorize (factors)
@@ -438,19 +444,16 @@
   )
   
 (defun deriv-divides (factor factors x)
-  (let* ((u (cadr factor))              ; factor = u^n
+  (let* ((u (cadr factor))           
          (n (caddr factor))
          (divfacts (divide-factors 
               factors (factorize `(* ,factor ,(differentiate u x))))))
     (cond ((notContainsVariable divfacts x)
-           ;; Int k*u^n*du/dx dx = k*Int u^n du
-           ;;                    = k*u^(n+1)/(n+1) for n<>1
-           ;;                    = k*log(u) for n=1
            (if (= n -1)
                `(* ,(unfactorize divfacts) (log ,u))
                `(/ (* ,(unfactorize divfacts) (^ ,u ,(+ n 1)))
                    ,(+ n 1))))
-          ((= n 1)
+          ((= n 1) 
            ;; TODO : Check if u is actually integrable 
            ;; Int y'*f(y) dx = Int f(y) dy
            (let ((k (divide-factors
