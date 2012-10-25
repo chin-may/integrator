@@ -67,7 +67,7 @@
                            x-factors))
                     (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
     
-    ;;The lines below are not really needed any more actually 
+    ;;The lines below in this function are not really needed any more actually 
     ((isProd expr)
      (cond 
        ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
@@ -129,6 +129,7 @@
      )
     )
   )
+  
 (defun partition-if (pred lst)
 "Return 2 values: elements of list that satisfy pred,
   and elements that don't."
@@ -363,6 +364,7 @@
   where each factor is of the form (^ y n)."
   (let ((factors nil)
         (constant 1))
+    ;; The 
     (labels
       ((fac (x n)
          (cond
@@ -381,6 +383,7 @@
                 (if factor
                     (incf (caddr factor) n)
                     (push `(^ ,x ,n) factors)))))))
+      
       
       (fac expr 1)
       (case constant
@@ -412,14 +415,11 @@
   )
   
 (defun deriv-divides (factor factors x)
-  (let* ((u (cadr factor))              ; factor = u^n
+  (let* ((u (cadr factor))           
          (n (caddr factor))
          (divfacts (divide-factors 
               factors (factorize `(* ,factor ,(differentiate u x))))))
     (cond ((notContainsVariable divfacts x)
-           ;; Int k*u^n*du/dx dx = k*Int u^n du
-           ;;                    = k*u^(n+1)/(n+1) for n<>1
-           ;;                    = k*log(u) for n=1
            (if (= n -1)
                `(* ,(unfactorize divfacts) (log ,u))
                `(/ (* ,(unfactorize divfacts) (^ ,u ,(+ n 1)))
