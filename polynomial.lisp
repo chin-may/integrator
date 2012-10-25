@@ -310,11 +310,11 @@
       ((fac (x n)
          (cond
            ((numberp x) (setf constant (* constant (expt x n))))
-           ((starts-with x '*) (fac (cadr  x) n) (fac (caddr x) n))
+           ((starts-with x '*) (fac (cadr x) n) (fac (caddr x) n))
            ((starts-with x '/)
             (fac (cadr x) n)
             (fac (caddr x) (- n)))
-           ((and (starts-with x '-) (eq (length (rest 1)) 1))
+           ((and (starts-with x '-) (and (consp (rest x)) (null (cdr (cdr x)))))
             (setf constant (- constant))
             (fac (cadr x) n))
            ((and (starts-with x '^) (numberp (caddr x)))
@@ -329,7 +329,7 @@
       (case constant
         (0 '((^ 0 1)))
         (1 factors)
-        (t `(,constant .,factors))))))
+        (t `(^ ,constant 1) .,factors))))))
 
 
 (defun unfactorize (factors)
