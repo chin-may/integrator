@@ -1,12 +1,13 @@
 (defun integrate (expr dvar)
-  (cond 
+  (cond
+    ((notContainsVariable dvar expr) `(* ,expr x))
     ((numberp expr) (make-prod expr dvar))
     ((symbolp expr) (make-div (make-pow expr 2) 2))
     ((isPow expr dvar) 
      (make-div (make-pow dvar (+ (exponent expr) 1)) (+ (exponent expr) 1))
      )
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
-    ((isUnaryMinus expr) `(- ,integrate (cadr expr) dvar ))
+    ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isProd expr)
      (cond 
@@ -40,6 +41,15 @@
 
 (defun isProd (expr)
   (eq '* (car expr)))
+
+(defun isUnaryMinus (expr)
+  (and (eq '- (car expr)) (eq (length expr) 2))
+  )
+
+(defun isSub (expr)
+  (and (eq '- (car expr)) (eq (length expr) 3))
+  )
+
 
 (defun differentiate (expr dvar)
   (cond 
