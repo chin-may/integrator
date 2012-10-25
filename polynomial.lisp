@@ -317,7 +317,7 @@
   (cond 
     ((and (numberp l) (numberp r))
      (- l r))
-    ((eq 0 l) (- r)) 
+    ((eq 0 l) (list '- r)) 
     ((eq 0 r) l) 
     (T (list '- l r)) 
     ) 
