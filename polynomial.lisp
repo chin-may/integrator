@@ -6,6 +6,8 @@
      (make-div (make-pow dvar (+ (exponent expr) 1)) (+ (exponent expr) 1))
      )
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
+    ((isUnaryMinus expr) `(- ,integrate (cadr expr) dvar ))
+    ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isProd expr)
      (cond 
        ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
@@ -124,8 +126,8 @@
     )
   )
 
-(defun containsVariable (var expr)
-  (find-Variable var expr)
+(defun notContainsVariable (var expr)
+   (not (find-Variable var expr))
   )
 
 (defun find-Variable (var expr)
@@ -140,4 +142,3 @@
     (and (print (cadr expr)) (inprint (car expr)) (inprint (caddr expr)))
     )
   )
-
