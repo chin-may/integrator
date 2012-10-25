@@ -78,7 +78,6 @@
   )
 
 
-<<<<<<< HEAD
 (defun handleExp (expr dvar)
   (cond
     ((eq dvar (caddr expr) )
