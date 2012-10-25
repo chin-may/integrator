@@ -57,7 +57,26 @@
         )
        )
      )
+    ((isExp expr) (handleExp expr dvar))
     
+    )
+  )
+
+
+(defun handleExp (expr dvar)
+  (cond
+    ((eq dvar (caddr expr) )
+     `(+ (^ e ,dvar) c)
+     )
+    ((isAx (caddr expr) dvar)
+     `(+ ,(make-div `(^ e ,(caddr expr))  (getA (caddr expr) dvar)) c)
+     )
+    ((isXb (caddr expr) dvar)
+     `(+ (^ e , (caddr expr)) c)
+     )
+    ((isAxb (caddr expr) dvar)
+     `(+ ,(make-div `(^ e ,(caddr expr))  (getA (caddr expr)) dvar) c)
+     )
     )
   )
 
@@ -111,7 +130,7 @@
   )
 
 (defun isExp (expr)
-  (and (eq (car expr '^)) (eq (cadr expr 'e))))
+  (and (eq (car expr) '^) (eq (cadr expr) 'e)))
 
 (defun isSin (expr)
   (eq (car expr) 'sin)
