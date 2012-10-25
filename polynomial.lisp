@@ -162,6 +162,40 @@
     )
   )
 
+(defun starts-with ( list x )
+    ( and (consp list ) (eql (first list) x ))
+
+(defun factorize (expr)
+  "Return a list of the factors of expr^n,
+  where each factor is of the form (^ y n)."
+  (let ((factors nil)
+        (constant 1))
+    (labels
+      ((fac (x n)
+         (cond
+           ((numberp x) (setf constant (* constant (expr x n))))
+           ((starts-with x '*) (fac ((cadr expr) x) n) (fac (e x) n))
+           ((starts-with x '/)
+            (fac ((cadr expr) x) n)
+            (fac ((caddr expr) x) (- n)))
+           ((and (starts-with x '-) (eq (length (rest 1)) 1))
+            (setf constant (- constant))
+            (fac ((cadr expr) x) n))
+           ((and (starts-with x '^) (numberp ((caddr expr) x)))
+            (fac ((cadr expr) x) (* n ((caddr expr) x))))
+           (t (let ((factor (find x factors :key #'(cadr expr)
+                                  :test #'equal)))
+                (if factor
+                    (incf ((caddr expr) factor) n)
+                    (push `(^ ,x ,n) factors)))))))
+      
+      ;; Body of factorize:
+      (fac exp 1)
+      (case constant
+        (0 '((^ 0 1)))
+        (1 factors)
+        (t `((^ ,constant 1) .,factors))))))
+
 (defun notContainsVariable (var expr)
    (not (find-Variable var expr))
   )
