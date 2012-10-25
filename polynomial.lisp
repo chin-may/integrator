@@ -9,22 +9,7 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
-    ((isProd expr)
-     (cond 
-       ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
-       ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
-       (T (make-sub
-            (make-prod (caddr expr) (integrate (cadr expr) dvar))
-            (integrate 
-              (make-prod 
-                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
-       )
-     )
-    ((isDiv expr)
-     (if (numberp (divisor expr))
-       (make-div (integrate (dividend expr) dvar) (divisor expr))
-       )
-     )
+    
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr)) 
@@ -41,6 +26,7 @@
         )
        )
      )
+     
     ((isCos expr)
      (cond 
        ((eq dvar (cadr expr)) 
@@ -59,10 +45,40 @@
      )
     ((isExp expr) (handleExp expr dvar))
     
+    ((multiple-value-bind (const-factors x-factors)
+         (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
+                       (factorize expr))
+       (identity
+         `(* ,(unfactorize const-factors)
+             ;; And try to integrate:
+             ,(cond ((null x-factors) dvar)
+                    ((some #'(lambda (factor)
+                               (deriv-divides factor x-factors dvar))
+                           x-factors))
+                    (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
+     
+    ((isProd expr)
+     (cond 
+       ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
+       ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
+       (T (make-sub
+            (make-prod (caddr expr) (integrate (cadr expr) dvar))
+            (integrate 
+              (make-prod 
+                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
+       )
+     )
+     
+    ((isDiv expr)
+     (if (numberp (divisor expr))
+       (make-div (integrate (dividend expr) dvar) (divisor expr))
+       )
+     )
     )
   )
 
 
+<<<<<<< HEAD
 (defun handleExp (expr dvar)
   (cond
     ((eq dvar (caddr expr) )
@@ -79,6 +95,17 @@
      )
     )
   )
+
+(defun partition-if (pred list)
+  "Return 2 values: elements of list that satisfy pred,
+  and elements that don't."
+  (let ((yes-list nil)
+        (no-list nil))
+    (dolist (item list)
+      (if (funcall pred item)
+          (push item yes-list)
+          (push item no-list)))
+    (values (nreverse yes-list) (nreverse no-list))))
 
 (defun isAx (expr dvar)
   (if (atom expr)
@@ -248,12 +275,53 @@
     )
   )
 
+(defun starts-with ( list x )
+    ( and (consp list ) (eql (first list) x )))
+
+(defun factorize (expr)
+  "Return a list of the factors of expr^n,
+  where each factor is of the form (^ y n)."
+  (let ((factors nil)
+        (constant 1))
+    (labels
+      ((fac (x n)
+         (cond
+           ((numberp x) (setf constant (* constant (expt x n))))
+           ((starts-with x '*) (fac (cadr  x) n) (fac (caddr x) n))
+           ((starts-with x '/)
+            (fac (cadr x) n)
+            (fac (caddr x) (- n)))
+           ((and (starts-with x '-) (eq (length (rest 1)) 1))
+            (setf constant (- constant))
+            (fac (cadr x) n))
+           ((and (starts-with x '^) (numberp (caddr x)))
+            (fac (cadr x) (* n (caddr x))))
+           (t (let ((factor (find x factors :key #'cadr
+                                  :test #'equal)))
+                (if factor
+                    (incf (caddr factor) n)
+                    (push `(^ ,x ,n) factors)))))))
+      
+      (fac expr 1)
+      (case constant
+        (0 '((^ 0 1)))
+        (1 factors)
+        (t `((^ ,constant 1) .,factors))))))
+
+
+(defun unfactorize (factors)
+  "Convert a list of factors back into prefix form."
+  (cond ((null factors) 1)
+        ((eq (length factors) 1) (first factors))
+        (t `(* ,(first factors) ,(unfactorize (rest factors))))))
+
 (defun notContainsVariable (expr var)
   (if (atom expr)
     (not(eq expr var))
     (not (find-Variable var expr))
     )
   )
+
 
 (defun find-Variable (var expr)
   (cond ((eql var expr) expr)
@@ -262,11 +330,47 @@
         ((find-Variable var (cdr expr)))
         )
   )
+  
+(defun deriv-divides (factor factors x)
+  (let* ((u (cadr factor))              ; factor = u^n
+         (n (caddr factor))
+         (divfacts (divide-factors 
+              factors (factorize `(* ,factor ,(differentiate u x))))))
+    (cond ((notContainsVariable divfacts x)
+           ;; Int k*u^n*du/dx dx = k*Int u^n du
+           ;;                    = k*u^(n+1)/(n+1) for n<>1
+           ;;                    = k*log(u) for n=1
+           (if (= n -1)
+               `(* ,(unfactorize divfacts) (log ,u))
+               `(/ (* ,(unfactorize divfacts) (^ ,u ,(+ n 1)))
+                   ,(+ n 1))))
+          ((= n 1)
+           ;; TODO : Check if u is actually integrable 
+           ;; Int y'*f(y) dx = Int f(y) dy
+           (let ((k (divide-factors
+                       factors
+                       (factorize `(* ,u ,(differentiate (cadr u) x))))))
+             (if (notContainsVariable k x)
+                 `(* ,(integrate (car u) (cadr u))
+                     ,(unfactorize k))))))))
+  
 (defun inprint (expr)
   (if (atom expr) (print expr)
     (and (print (cadr expr)) (inprint (car expr)) (inprint (caddr expr)))
     )
   )
+
+(defun divide-factors (numer denom)
+  "Divide a list of factors by another, producing a third."
+  (let ((result (mapcar #'copy-list numer)))
+    (dolist (d denom)
+      (let ((factor (find (cadr d) result :key #'cadr
+                          :test #'equal)))
+        (if factor
+            (decf (caddr factor) (caddr d))
+            (push `(^ ,(cadr d) ,(- (caddr d))) result))))
+    (delete 0 result :key #'caddr)))
+  
 
 (defun simplify (expr)
   (cond 
