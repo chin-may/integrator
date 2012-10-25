@@ -25,7 +25,33 @@
        (make-div (integrate (dividend expr) dvar) (divisor expr))
        )
      )
+    ((isSin expr)
+     (cond 
+       ((eq dvar (cadr expr))(make-prod ('cos dvar) -1))
+       ((isAx (cadr expr)) ())
+           )
+     
+     )
+    ((isCos expr)
+     ('sin )
+     )
     )
+  )
+
+(defun isAx (expr dvar)
+  (and (eq '* (car expr)) 
+       (or 
+         (and (eq dvar (cadr expr)) (not (containsVariable dvar (caddr expr))))
+         (and (eq dvar (caddr expr)) (not (containsVariable dvar (cadr expr))))
+         )
+       )
+  )
+(defun getA (expr dvar)
+  (if ())
+  )
+
+(defun isSin (expr)
+  (eq (car expr) 'sin)
   )
 
 (defun isDiv (expr)
@@ -151,4 +177,15 @@
   (if (atom expr) (print expr)
     (and (print (cadr expr)) (inprint (car expr)) (inprint (caddr expr)))
     )
+  )
+
+(defun simplify (expr)
+  (cond 
+    ((isAdd expr)
+     (cond ((eq (simplify (cadr expr)) (simplify (caddr expr))) (list '* (simplify (cadr expr)) 2))
+           ((numberp (simplify (cadr expr)) ))
+           )
+     )
+    )
+  
   )
