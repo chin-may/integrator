@@ -9,20 +9,19 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
-    
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr)) 
         `(+ (- (cos ,dvar)) c)
         )
        ((isAx (cadr expr) dvar) 
-        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr)))) c)
+        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr) dvar))) c)
         )
        ((isXb (cadr expr) dvar)
         `(+ (- (cos ,(cadr expr))) c)
         )
        ((isAxb (cadr expr) dvar)
-        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr)))) c)
+        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr) dvar))) c)
         )
        )
      )
@@ -43,6 +42,7 @@
         )
        )
      )
+    ((isExp expr) (handleExp expr dvar))
     
     ((multiple-value-bind (const-factors x-factors)
          (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
@@ -77,8 +77,25 @@
   )
 
 
+(defun handleExp (expr dvar)
+  (cond
+    ((eq dvar (caddr expr) )
+     `(+ (^ e ,dvar) c)
+     )
+    ((isAx (caddr expr) dvar)
+     `(+ ,(make-div `(^ e ,(caddr expr))  (getA (caddr expr) dvar)) c)
+     )
+    ((isXb (caddr expr) dvar)
+     `(+ (^ e , (caddr expr)) c)
+     )
+    ((isAxb (caddr expr) dvar)
+     `(+ ,(make-div `(^ e ,(caddr expr))  (getA (caddr expr)) dvar) c)
+     )
+    )
+  )
+
 (defun partition-if (pred lst)
-  "Return 2 values: elements of list that satisfy pred,
+"Return 2 values: elements of list that satisfy pred,
   and elements that don't."
   (let ((yes-list nil)
         (no-list nil))
@@ -87,7 +104,7 @@
           (push item yes-list)
           (push item no-list)))
     (values (nreverse yes-list) (nreverse no-list))))
-    
+
 (defun isAx (expr dvar)
   (if (atom expr)
     nil
@@ -138,7 +155,7 @@
   )
 
 (defun isExp (expr)
-  (and (eq (car expr '^)) (eq (cadr expr 'e))))
+  (and (eq (car expr) '^) (eq (cadr expr) 'e)))
 
 (defun isSin (expr)
   (eq (car expr) 'sin)
@@ -173,13 +190,22 @@
 
 (defun differentiate (expr dvar)
   (cond 
-    ((numberp expr) 0)
+    ((notContainsVariable expr dvar) 0)
     ((symbolp expr) 1)
     ((isAdd expr) (make-sum (differentiate (cadr expr) dvar) (differentiate (caddr expr) dvar)))
+    ((isSub expr) (make-sub (differentiate (cadr expr) dvar) (differentiate (caddr expr) dvar)))
     ((isProd expr) 
      (make-sum 
        (make-prod (multiplier expr) (differentiate (multiplicand expr) dvar))
        (make-prod (multiplicand expr) (differentiate (multiplier expr) dvar))
+       )
+     )
+    ((isDiv expr)
+     (make-div 
+       (make-sub 
+         (make-prod (divisor expr) (differentiate (dividend expr) dvar))
+         (make-prod ())
+         )
        )
      )
     ((isPow expr dvar) (make-prod (make-pow (base expr) (- (exponent expr) 1))(exponent expr)))
