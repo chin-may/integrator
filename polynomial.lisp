@@ -4,7 +4,7 @@
     ((numberp expr) (make-prod expr dvar))
     ((symbolp expr) (make-div (make-pow expr 2) 2))
     ((isPow expr dvar) 
-     (make-div (make-pow dvar (+ (exponent expr) 1)) (+ (exponent expr) 1))
+     (make-div (make-pow dvar (make-sum (exponent expr) 1)) (make-sum (exponent expr) 1))
      )
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
@@ -81,12 +81,23 @@
      )
     
     ((isDiv expr)
-     (if (numberp (divisor expr))
-       (make-div (integrate (dividend expr) dvar) (divisor expr))
-       (make-div (integrate (dividend expr) dvar) (divisor expr))
+     (cond 
+       ((numberp (divisor expr))
+        (make-div (integrate (dividend expr) dvar) (divisor expr)))
+       ((isAtanForm expr dvar))
        )
      )
     )
+  )
+
+(defun isAtanForm (expr dvar)
+  (and (eq / (car expr)) 
+       (notContainsVariable (cadr expr) dvar)
+       (or
+         (and (notContainsVariable (cadr (caddr expr)) dvar) (isSqr (caddr (caddr expr))))
+         (and (notContainsVariable (caddr (caddr expr)) dvar) (isSqr (cadr (caddr expr))))
+         )
+       )
   )
 
 
@@ -130,6 +141,7 @@
     )
   )
   
+
 (defun partition-if (pred lst)
 "Return 2 values: elements of list that satisfy pred,
   and elements that don't."
@@ -210,6 +222,10 @@
     (caddr expr)
     (cadr expr)
     )
+  )
+
+(defun isTan (expr)
+  (eq (car expr) 'tan)
   )
 
 (defun isExp (expr)
