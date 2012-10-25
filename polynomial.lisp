@@ -202,10 +202,14 @@
        )
      )
     ((isDiv expr)
-     (make-div 
-       (make-sub 
-         (make-prod (divisor expr) (differentiate (dividend expr) dvar))
-         (make-prod ())
+     (if (notContainsVariable (divisor expr) dvar)
+       (make-div (differentiate (dividend expr) dvar) (divisor expr))
+       (make-div 
+         (make-sub 
+           (make-prod (divisor expr) (differentiate (dividend expr) dvar))
+           (make-prod (dividend expr) (differentiate (divisor expr) dvar))
+           )
+         (list '^ (divisor expr) 2)
          )
        )
      )
