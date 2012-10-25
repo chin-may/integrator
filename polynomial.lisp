@@ -1,6 +1,6 @@
 (defun integrate (expr dvar)
   (cond
-    ((notContainsVariable dvar expr) `(* ,expr x))
+    ((notContainsVariable expr dvar ) `(* ,expr x))
     ((numberp expr) (make-prod expr dvar))
     ((symbolp expr) (make-div (make-pow expr 2) 2))
     ((isPow expr dvar) 
@@ -28,7 +28,8 @@
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr))(make-prod ('cos dvar) -1))
-       ((isAx (cadr expr)) ())
+       ((isAx (cadr expr)) (make-div ('cos (cadr expr)) (getA (cadr expr))))
+       ()
            )
      
      )
@@ -41,13 +42,27 @@
 (defun isAx (expr dvar)
   (and (eq '* (car expr)) 
        (or 
-         (and (eq dvar (cadr expr)) (not (containsVariable dvar (caddr expr))))
-         (and (eq dvar (caddr expr)) (not (containsVariable dvar (cadr expr))))
+         (and (eq dvar (cadr expr)) (notContainsVariable (caddr expr) dvar ))
+         (and (eq dvar (caddr expr)) (notContainsVariable (cadr expr) dvar ))
          )
        )
   )
+
+(defun isAxb (expr dvar)
+  (and (eq '+ (car expr)) 
+       (or (and (isAx (cadr expr) dvar) (notContainsVariable (caddr expr) dvar )))
+           (and (isAx (caddr expr) dvar) (notContainsVariable (cadr expr) dvar ))
+       )
+  )
+
 (defun getA (expr dvar)
-  (if ())
+  (if (isAx expr dvar)
+    (if (notContainsVariable (cadr expr) dvar ) 
+      (cadr expr)
+      (caddr expr)
+      )
+    )
+    (if (isAx (cadr expr) dvar))
   )
 
 (defun isSin (expr)
@@ -162,7 +177,7 @@
     )
   )
 
-(defun notContainsVariable (var expr)
+(defun notContainsVariable (expr var)
    (not (find-Variable var expr))
   )
 
