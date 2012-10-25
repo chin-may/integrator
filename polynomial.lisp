@@ -77,16 +77,17 @@
   )
 
 
-(defun partition-if (pred list)
+(defun partition-if (pred lst)
   "Return 2 values: elements of list that satisfy pred,
   and elements that don't."
   (let ((yes-list nil)
         (no-list nil))
-    (dolist (item list)
+    (dolist (item lst)
       (if (funcall pred item)
           (push item yes-list)
           (push item no-list)))
     (values (nreverse yes-list) (nreverse no-list))))
+    
 (defun isAx (expr dvar)
   (if (atom expr)
     nil
@@ -255,8 +256,8 @@
     )
   )
 
-(defun starts-with ( list x )
-    ( and (consp list ) (eql (first list) x )))
+(defun starts-with ( lst x )
+    ( and (consp lst ) (eql (first lst) x )))
 
 (defun factorize (expr)
   "Return a list of the factors of expr^n,
@@ -286,7 +287,7 @@
       (case constant
         (0 '((^ 0 1)))
         (1 factors)
-        (t `((^ ,constant 1) .,factors))))))
+        (t `(,constant .,factors))))))
 
 
 (defun unfactorize (factors)
@@ -356,9 +357,4 @@
   (cond 
     ((isAdd expr)
      (cond ((eq (simplify (cadr expr)) (simplify (caddr expr))) (list '* (simplify (cadr expr)) 2))
-           ((numberp (simplify (cadr expr)) ))
-           )
-     )
-    )
-  
-  )
+           ((numberp (simplify (cadr expr))))))))
