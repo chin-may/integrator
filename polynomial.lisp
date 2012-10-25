@@ -157,8 +157,8 @@
 (defun isExp (expr)
   (and (eq (car expr) '^) (eq (cadr expr) 'e)))
 
-(defun isAExp (expr)
-  (and (eq (car expr) '^) (notContainsVariable (cadr expr))))
+(defun isAExp (expr dvar)
+  (and (eq (car expr) '^) (notContainsVariable (cadr expr) dvar)))
 
 (defun isLog (expr)
   (eq (car expr) 'log)
@@ -177,7 +177,7 @@
   )
 
 (defun isPow (expr dvar)
-  (and (eq (car expr) '^) (eq (cadr expr) dvar) (numberp (caddr expr)))
+  (and (eq (car expr) '^) (eq (cadr expr) dvar) (notContainsVariable (caddr expr) dvar))
   )
 
 (defun isAdd (expr)
@@ -219,11 +219,11 @@
          )
        )
      )
-    ((isPow expr dvar) (make-prod (make-pow (base expr) (- (exponent expr) 1))(exponent expr)))
+    ((isPow expr dvar) (make-prod (make-pow (base expr) (make-sub (exponent expr) 1))(exponent expr)))
     ((isSin expr) (make-prod (list 'cos (cadr expr)) (differentiate (cadr expr) dvar)))
     ((isCos expr) (make-prod (list '- (list 'sin (cadr expr))) (differentiate (cadr expr) dvar)))
     ((isExp expr) (make-prod expr (differentiate (caddr expr) dvar)))
-    ((isAExp expr) (make-prod (list 'log (cadr expr)) (make-prod expr (differentiate (caddr expr) dvar)) ))
+    ((isAExp expr dvar) (make-prod (list 'log (cadr expr)) (make-prod expr (differentiate (caddr expr) dvar)) ))
     ((isLog expr) (make-div (differentiate (cadr expr) dvar) (cadr expr)))
     )
   )
