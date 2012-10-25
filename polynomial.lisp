@@ -158,6 +158,13 @@
 (defun isExp (expr)
   (and (eq (car expr) '^) (eq (cadr expr) 'e)))
 
+(defun isAExp (expr)
+  (and (eq (car expr) '^) (notContainsVariable (cadr expr))))
+
+(defun isLog (expr)
+  (eq (car expr) 'log)
+  )
+
 (defun isSin (expr)
   (eq (car expr) 'sin)
   )
@@ -214,6 +221,11 @@
        )
      )
     ((isPow expr dvar) (make-prod (make-pow (base expr) (- (exponent expr) 1))(exponent expr)))
+    ((isSin expr) (make-prod (list 'cos (cadr expr)) (differentiate (cadr expr) dvar)))
+    ((isCos expr) (make-prod (list '- (list 'sin (cadr expr))) (differentiate (cadr expr) dvar)))
+    ((isExp expr) (make-prod expr (differentiate (caddr expr) dvar)))
+    ((isAExp expr) (make-prod (list 'log (cadr expr)) (make-prod expr (differentiate (caddr expr) dvar)) ))
+    ((isLog expr) (make-div (differentiate (cadr expr) dvar) (cadr expr)))
     )
   )
 
