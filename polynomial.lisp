@@ -50,7 +50,15 @@
      )
     ((isExp expr) (handleExp expr dvar))
     ((isAExp expr dvar) (handleAExp expr dvar))
-    
+    ((isDiv expr)
+     (cond 
+       ((numberp (divisor expr))
+        (make-div (integrate (dividend expr) dvar) (divisor expr)))
+       ((isAtanForm expr dvar)
+        `( (/ (atan (/ ,dvar (sqrt ,(getAtanA expr dvar)))) (sqrt ,(getAtanA expr dvar))))
+        )
+       )
+     )
     ((multiple-value-bind (const-factors x-factors)
          (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
@@ -75,23 +83,30 @@
        )
      )
      
-    ((isDiv expr)
-     (cond 
-       ((numberp (divisor expr))
-        (make-div (integrate (dividend expr) dvar) (divisor expr)))
-       ((isAtanForm expr dvar))
-       )
-     )
+    
+    )
+  )
+
+(defun getAtanA (expr dvar)
+  (if (notContainsVariable (cadr (caddr expr)) dvar) (cadr (caddr expr))
+    (caddr (caddr expr))
     )
   )
 
 (defun isAtanForm (expr dvar)
-  (and (eq / (car expr)) 
+  (and (eq '/ (car expr)) 
        (notContainsVariable (cadr expr) dvar)
        (or
-         (and (notContainsVariable (cadr (caddr expr)) dvar) (isSqr (caddr (caddr expr))))
-         (and (notContainsVariable (caddr (caddr expr)) dvar) (isSqr (cadr (caddr expr))))
+         (and (notContainsVariable (cadr (caddr expr)) dvar) (isSqr (caddr (caddr expr)) dvar))
+         (and (notContainsVariable (caddr (caddr expr)) dvar) (isSqr (cadr (caddr expr)) dvar))
          )
+       (eq '+ (car (caddr expr)))
+       )
+  )
+(defun isSqr (expr dvar)
+  (and (eq '^ (car expr))
+       (eq dvar (cadr expr))
+       (eq 2 (caddr expr))
        )
   )
 
