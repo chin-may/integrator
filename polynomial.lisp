@@ -9,6 +9,10 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
+    ((and (isProd expr) (numberp (cadr expr))) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
+    ((and (isProd expr) (numberp (caddr expr))) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
+    ;((and (isDiv expr) (numberp (divisor expr))) (make-div (integrate (dividend expr) dvar) (divisor expr)))
+        
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr)) 
@@ -55,7 +59,8 @@
                                (deriv-divides factor x-factors dvar))
                            x-factors))
                     (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
-     
+    
+    ;;The lines below are not really needed any more actually 
     ((isProd expr)
      (cond 
        ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
@@ -67,9 +72,10 @@
                 (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
        )
      )
-     
+    
     ((isDiv expr)
      (if (numberp (divisor expr))
+       (make-div (integrate (dividend expr) dvar) (divisor expr))
        (make-div (integrate (dividend expr) dvar) (divisor expr))
        )
      )
@@ -329,7 +335,7 @@
       (case constant
         (0 '((^ 0 1)))
         (1 factors)
-        (t `(^ ,constant 1) .,factors))))))
+        (t `( ( ^ ,constant 1) .,factors))))))
 
 
 (defun unfactorize (factors)
@@ -367,7 +373,7 @@
                `(* ,(unfactorize divfacts) (log ,u))
                `(/ (* ,(unfactorize divfacts) (^ ,u ,(+ n 1)))
                    ,(+ n 1))))
-          ((= n 1)
+          ((= n 1) 
            ;; TODO : Check if u is actually integrable 
            ;; Int y'*f(y) dx = Int f(y) dy
            (let ((k (divide-factors
