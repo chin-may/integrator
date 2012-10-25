@@ -9,7 +9,6 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
-    
     ((isSin expr)
      (cond 
        ((eq dvar (cadr expr)) 
@@ -95,12 +94,12 @@
     )
   )
 
-(defun partition-if (pred list)
-  "Return 2 values: elements of list that satisfy pred,
+(defun partition-if (pred lst)
+"Return 2 values: elements of list that satisfy pred,
   and elements that don't."
   (let ((yes-list nil)
         (no-list nil))
-    (dolist (item list)
+    (dolist (item lst)
       (if (funcall pred item)
           (push item yes-list)
           (push item no-list)))
@@ -299,8 +298,8 @@
     )
   )
 
-(defun starts-with ( list x )
-    ( and (consp list ) (eql (first list) x )))
+(defun starts-with ( lst x )
+    ( and (consp lst ) (eql (first lst) x )))
 
 (defun factorize (expr)
   "Return a list of the factors of expr^n,
@@ -330,7 +329,7 @@
       (case constant
         (0 '((^ 0 1)))
         (1 factors)
-        (t `((^ ,constant 1) .,factors))))))
+        (t `(,constant .,factors))))))
 
 
 (defun unfactorize (factors)
@@ -400,9 +399,4 @@
   (cond 
     ((isAdd expr)
      (cond ((eq (simplify (cadr expr)) (simplify (caddr expr))) (list '* (simplify (cadr expr)) 2))
-           ((numberp (simplify (cadr expr)) ))
-           )
-     )
-    )
-  
-  )
+           ((numberp (simplify (cadr expr))))))))
