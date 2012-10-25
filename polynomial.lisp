@@ -124,8 +124,20 @@
     )
   )
 
+(defun containsVariable (var expr)
+  (find-Variable var expr)
+  )
+
+(defun find-Variable (var expr)
+  (cond ((eql var expr) expr)
+        ((atom expr) nil)
+        ((find-Variable var (car expr)))
+        ((find-Variable var (cdr expr)))
+        )
+  )
 (defun inprint (expr)
   (if (atom expr) (print expr)
     (and (print (cadr expr)) (inprint (car expr)) (inprint (caddr expr)))
     )
   )
+
