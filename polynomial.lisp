@@ -9,6 +9,41 @@
     ((isAdd expr) (make-sum (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     ((isUnaryMinus expr) `(- , (integrate (cadr expr) dvar) ))
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
+    
+    ((isSin expr)
+     (cond 
+       ((eq dvar (cadr expr)) 
+        `(+ (- (cos ,dvar)) c)
+        )
+       ((isAx (cadr expr) dvar) 
+        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr)))) c)
+        )
+       ((isXb (cadr expr) dvar)
+        `(+ (- (cos ,(cadr expr))) c)
+        )
+       ((isAxb (cadr expr) dvar)
+        `(+ (- ,(make-div (list 'cos (cadr expr)) (getA (cadr expr)))) c)
+        )
+       )
+     )
+     
+    ((isCos expr)
+     (cond 
+       ((eq dvar (cadr expr)) 
+        `(+ (sin ,dvar)  c)
+        )
+       ((isAx (cadr expr) dvar) 
+        (list '+ (make-div (list 'cos (cadr expr)) (getA (cadr expr) dvar)) 'c)
+        )
+       ((isXb (cadr expr) dvar)
+        `(+ (sin ,(cadr expr)) c)
+        )
+       ((isAxb (cadr expr) dvar)
+        (list '+ (make-div (list 'cos (cadr expr)) (getA (cadr expr) dvar)) 'c)
+        )
+       )
+     )
+    
     ((multiple-value-bind (const-factors x-factors)
          (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
@@ -19,8 +54,8 @@
                     ((some #'(lambda (factor)
                                (deriv-divides factor x-factors dvar))
                            x-factors))
-                    (t `(int? ,(unfactorize x-factors) ,dvar)))))))
-
+                    (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
+     
     ((isProd expr)
      (cond 
        ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
@@ -32,21 +67,12 @@
                 (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
        )
      )
+     
     ((isDiv expr)
      (if (numberp (divisor expr))
        (make-div (integrate (dividend expr) dvar) (divisor expr))
        )
      )
-    ((isSin expr)
-     (cond 
-       ((eq dvar (cadr expr)) (make-prod (list 'cos dvar) -1))
-       ((isAx (cadr expr)) (make-div (list 'cos (cadr expr)) (getA (cadr expr))))
-       ((isAxb (cadr expr))
-        (make-div (list 'cos (cadr expr)) (getA (cadr expr)))
-        )
-       )
-     )
-     
     )
   )
 
@@ -62,18 +88,31 @@
           (push item no-list)))
     (values (nreverse yes-list) (nreverse no-list))))
 (defun isAx (expr dvar)
-  (and (eq '* (car expr)) 
-       (or 
-         (and (eq dvar (cadr expr)) (notContainsVariable (caddr expr) dvar ))
-         (and (eq dvar (caddr expr)) (notContainsVariable (cadr expr) dvar ))
+  (if (atom expr)
+    nil
+    (and (eq '* (car expr)) 
+         (or 
+           (and (eq dvar (cadr expr)) (notContainsVariable (caddr expr) dvar ))
+           (and (eq dvar (caddr expr)) (notContainsVariable (cadr expr) dvar ))
+           )
          )
-       )
+    )
+  )
+
+(defun isXb (expr dvar)
+ (and (eq (car expr) '+ )
+      (or 
+        (and (eq dvar (cadr expr)) (notContainsVariable (caddr expr) dvar))
+        (and (eq dvar (caddr expr)) (notContainsVariable (cadr expr) dvar))
+        )
+      ) 
   )
 
 (defun isAxb (expr dvar)
   (and (eq '+ (car expr)) 
-       (or (and (isAx (cadr expr) dvar) (notContainsVariable (caddr expr) dvar )))
+       (or (and (isAx (cadr expr) dvar) (notContainsVariable (caddr expr) dvar ))
            (and (isAx (caddr expr) dvar) (notContainsVariable (cadr expr) dvar ))
+           )
        )
   )
 
@@ -83,11 +122,11 @@
       (cadr expr)
       (caddr expr)
       )
-    )
     (if (isAx (cadr expr) dvar) 
       (getA (cadr expr) dvar)
       (getA (caddr expr) dvar)
       )
+    )
   )
 
 (defun getB (expr dvar)
@@ -97,8 +136,15 @@
     )
   )
 
+(defun isExp (expr)
+  (and (eq (car expr '^)) (eq (cadr expr 'e))))
+
 (defun isSin (expr)
   (eq (car expr) 'sin)
+  )
+
+(defun isCos (expr)
+  (eq (car expr) 'cos)
   )
 
 (defun isDiv (expr)
@@ -250,7 +296,10 @@
         (t `(* ,(first factors) ,(unfactorize (rest factors))))))
 
 (defun notContainsVariable (expr var)
-   (not (find-Variable var expr))
+  (if (atom expr)
+    (not(eq expr var))
+    (not (find-Variable var expr))
+    )
   )
 
 
