@@ -63,6 +63,22 @@
         )
        )
      )
+    ((and 
+        (isProd expr) 
+        (or 
+            (and (isSpecial (cadr expr)) (not (isSpecial (caddr expr))))
+            (and (isSpecial (caddr expr)) (not (isSpecial (cadr expr)))))
+         )
+     (cond 
+       ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
+       ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
+       (T (make-sub
+            (make-prod (caddr expr) (integrate (cadr expr) dvar))
+            (integrate 
+              (make-prod 
+                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
+       )
+     )
     ((multiple-value-bind (const-factors x-factors)
          (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
@@ -75,21 +91,17 @@
                            x-factors))
                     (t `(integrate ,(unfactorize x-factors) ,dvar)))))))
     
-    ;;The lines below in this function are not really needed any more actually 
-    ((isProd expr)
-     (cond 
-       ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
-       ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
-       (T (make-sub
-            (make-prod (caddr expr) (integrate (cadr expr) dvar))
-            (integrate 
-              (make-prod 
-                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
-       )
-     )
+    
     )
   )
 
+(defun isSpecial (expr)
+    (cond   
+            ((atom expr) nil)
+            ((or (isExp expr) (isAExp expr 'x) t))
+            ((eq (length expr) 2) t)
+            (t nil)))
+            
 (defun getAtanA (expr dvar)
   (if (notContainsVariable (cadr (caddr expr)) dvar) (cadr (caddr expr))
     (caddr (caddr expr))
