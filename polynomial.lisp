@@ -54,7 +54,7 @@
      )
     ((isExp expr) (handleExp expr dvar))
     ((isAExp expr dvar) (handleAExp expr dvar))
-    ((and (isDiv expr) (or (numberp (divisor expr)) (isAtanForm expr dvar)))
+    ((and (isDiv expr) (isAtanForm expr dvar))
      (cond 
        ((numberp (divisor expr))
         (make-div (integrate (dividend expr) dvar) (divisor expr)))
@@ -97,6 +97,7 @@
   )
 
 (defun isAtanForm (expr dvar)
+  (if (listp (caddr expr)) 
   (and (eq '/ (car expr)) 
        (notContainsVariable (cadr expr) dvar)
        (or
@@ -104,7 +105,7 @@
          (and (notContainsVariable (caddr (caddr expr)) dvar) (isSqr (cadr (caddr expr)) dvar))
          )
        (eq '+ (car (caddr expr)))
-       )
+       ))
   )
 (defun isSqr (expr dvar)
   (and (eq '^ (car expr))
@@ -428,10 +429,7 @@
         (t `(* ,(first factors) ,(unfactorize (rest factors))))))
 
 (defun notContainsVariable (expr var)
-  (if (atom expr)
-    (not(eq expr var))
-    (not (find-Variable var expr))
-    )
+  (not (find-Variable var expr))
   )
 
 
