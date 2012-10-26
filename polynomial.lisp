@@ -54,7 +54,7 @@
      )
     ((isExp expr) (handleExp expr dvar))
     ((isAExp expr dvar) (handleAExp expr dvar))
-    ((isDiv expr)
+    ((and (isDiv expr) (or (numberp (divisor expr)) (isAtanForm expr dvar)))
      (cond 
        ((numberp (divisor expr))
         (make-div (integrate (dividend expr) dvar) (divisor expr)))
