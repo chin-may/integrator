@@ -31,11 +31,27 @@
                          (cond 
                            ((numberp (cadr expr)) (make-prod (cadr expr) (integrate (caddr expr) dvar)))
                            ((numberp (caddr expr)) (make-prod (caddr expr) (integrate (cadr expr) dvar)))
-                           (t (make-sub
-                                (make-prod (caddr expr) (integrate (cadr expr) dvar))
-                                (integrate 
-                                  (make-prod 
-                                    (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
+                           (t  (let ((iuv (make-sub
+                                            (make-prod (caddr expr) (integrate (cadr expr) dvar))
+                                            (integrate 
+                                              (make-prod 
+                                                (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)
+                                            )
+
+                                          )
+                                     )
+                                 (if (findnil iuv)
+                                   (make-sub
+                                     (make-prod (cadr expr) (integrate (caddr expr) dvar))
+                                     (integrate 
+                                       (make-prod 
+                                         (differentiate (cadr expr) dvar) (integrate (caddr expr) dvar)) dvar)
+                                     )
+                                   iuv
+                                   )
+                                 )
+
+                               )
                          ))
                    
                     (t `(INTEGRATE ,(unfactorize x-factors) ,dvar))))))
@@ -515,7 +531,16 @@
              (if (notContainsVariable k2 x)
                  `(* ,(integrateFromTable u x)
                      ,(unfactorize k2))))))))
-  
+ 
+(defun findnil (expr)
+  (cond
+    ((atom expr) (null expr))
+    ((null (cdr expr)) (findnil (car expr)))
+    (T (or (findnil (car expr)) (findnil (cdr expr))))
+    )
+  )
+
+
 (defun inprint (expr)
   (cond ((atom expr) expr)
     ((eql (length expr) 2) expr)
