@@ -1,3 +1,8 @@
+;; Symbolic Integration in LISP
+;; Written as a part of the course CS310 - Paradigms of Programming
+;; Authors : Akhilesh Godi (CS10B037) and Chinmay Bapat (CS10B059)
+
+ 
 (defun integrate (expr dvar)
   (cond
     ((notContainsVariable expr dvar ) `(* ,expr ,dvar))
@@ -11,20 +16,19 @@
     ((isSub expr)  (make-sub (integrate (cadr expr) dvar) (integrate (caddr expr) dvar)))
     
     ;;  Split the expression up into 2 parts : One that contains x and one that does not.
-    ;;  Call the one that contains x as x-factors and the one that does not as const-factors
+    ;;  Call the one that contains x as factorsContainingX and the one that does not as const-factors
     
-    ((multiple-value-bind (const-factors x-factors)
+    ((multiple-value-bind (const-factors factorsContainingX)
        (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
        ;; Now integrate and return
        `(* 
-             ,(unfactorize const-factors)                   
+             ,(makeProductOfFactors const-factors)                   
              
-             ,(cond ((null x-factors) dvar)                     ;; If there are no factors containing variable return var
+             ,(cond ((null factorsContainingX) dvar)                     ;; If there are no factors containing variable return var
                     
                     ;; Try to integrate and check if the derivative divides the integral or other such forms
-                    ((some #'(lambda (factor) (deriv-divides factor x-factors dvar))
-                           x-factors))                          
+                    ((some #'(lambda (factor) (divideWithDerivative factor factorsContainingX dvar)) factorsContainingX))                          
                            
                     ;; u-v rule for integration!
                     ((isProd expr) 
@@ -54,7 +58,7 @@
                                )
                          ))
                    
-                    (t `(INTEGRATE ,(unfactorize x-factors) ,dvar))))))
+                    (t `(INTEGRATE ,(makeProductOfFactors factorsContainingX) ,dvar))))))
     )
   )
  
@@ -89,7 +93,7 @@
      `(- (* ,dvar (log ,(cadr expr))) ,dvar)
      )
     ((isTan expr) 
-     `(- (log (cos ,expr)))
+     `(- (log (cos ,(cadr expr))))
      )
     ((isCos expr)
      (cond 
@@ -385,6 +389,7 @@
     ((isExp expr) (make-prod expr (differentiate (caddr expr) dvar)))
     ((isAExp expr dvar) (make-prod (list 'log (cadr expr)) (make-prod expr (differentiate (caddr expr) dvar)) ))
     ((isLog expr) (make-div (differentiate (cadr expr) dvar) (cadr expr)))
+    ((isTan expr) (make-prod `(/ 1 (^ (cos ,(cadr expr)) 2))  (differentiate (cadr expr) dvar)))
     )
   )
 
@@ -458,49 +463,14 @@
     )
   )
 
-(defun starts-with ( lst x )
-    ( and (consp lst ) (eql (first lst) x )))
+(defun beginsWith ( lst x )
+    (and (consp lst) (eql (first lst) x )))
 
-;; This factorization function is based on PAIP.
-(defun factorize (expression)
-  "Return a list of the factors of exp^n,
-  where each factor is of the form (^ y n)."
-  (let ((factors nil)
-        (constant 1))
-    (labels
-      ((fac (x n)
-         (cond
-           ((numberp x)
-            (setf constant (* constant (expt x n))))
-           ((starts-with x '*)
-            (fac (cadr x) n)
-            (fac (caddr x) n))
-           ((starts-with x '/)
-            (fac (cadr x) n)
-            (fac (caddr x) (- n)))
-           ((and (starts-with x '-) (and (consp (cdr x)) (null (rest (cdr x)))
-            (setf constant (- constant))
-            (fac (cadr x) n))))
-           ((and (starts-with x '^) (numberp (caddr x)))
-            (fac (cadr x) (* n (caddr x))))
-           (t (let ((factor (find x factors :key #'cadr
-                                  :test #'equal)))
-                (if factor
-                    (incf (caddr factor) n)
-                    (push `(^ ,x ,n) factors)))))))
-      ;; Body of factorize:
-      (fac expression 1)
-      (case constant
-        (0 '((^ 0 1)))
-        (1 factors)
-        (t `((^ ,constant 1) .,factors))))))
-        
-
-(defun unfactorize (factors)
-  "Convert a list of factors back into prefix form."
+;; Convert a list of factors back into prefix form.
+(defun makeProductOfFactors (factors)
   (cond ((null factors) 1)
-        ((and (consp factors) (null (cdr factors))) (first factors))
-        (t `(* ,(first factors) ,(unfactorize (rest factors))))))
+        ((and (consp factors) (null (cdr factors))) (car factors))
+        (t `(* ,(first factors) ,(makeProductOfFactors (cdr factors))))))
 
 (defun notContainsVariable (expr var)
   (not (find-Variable var expr))
@@ -514,29 +484,7 @@
         ((find-Variable var (cdr expr)))
         )
   )
-  
-(defun deriv-divides (factor factors x)
-  (let* ((u (cadr factor))              ; factor = u^n
-         (n (caddr factor))
-         (k (divide-factors 
-              factors (factorize `(* ,factor ,(differentiate u x))))))
-    (cond ((notContainsVariable k x)
-           ;; Int k*u^n*du/dx dx = k*Int u^n du
-           ;;                    = k*u^(n+1)/(n+1) for n/=1
-           ;;                    = k*log(u) for n=1
-           (if (= n -1)
-               `(* ,(unfactorize k) (log ,u))
-               `(/ (* ,(unfactorize k) (^ ,u ,(+ n 1)))
-                   ,(+ n 1))))
-          ((and (= n 1) (or (isSin u) (isCos u) (isTan u) (isLog u) (isexp u) (isAexp u x)) )
-           ;; Int y'*f(y) dx = Int f(y) dy
-           (let ((k2 (divide-factors
-                       factors
-                       (factorize `(* ,u ,(differentiate (cadr u) x))))))
-             (if (notContainsVariable k2 x)
-                 `(* ,(integrateFromTable u x)
-                     ,(unfactorize k2))))))))
- 
+
 (defun findnil (expr)
   (cond
     ((atom expr) (null expr))
@@ -553,6 +501,65 @@
     )
   )
 
+(defun divideWithDerivative (factor factors x)
+  (let* ((fx (cadr factor))             
+         (n (caddr factor))
+         (fact1 (divide-factors factors (factorize `(* ,factor ,(differentiate fx x))))))
+    (cond ((notContainsVariable fact1 x)
+           (if (= n -1)
+               `(* ,(makeProductOfFactors fact1) (log ,fx))
+               `(/ (* ,(makeProductOfFactors fact1) (^ ,fx ,(+ n 1))) ,(+ n 1))))
+          ((and (= n 1) (or (isSin fx) (isCos fx) (isTan fx) (isLog fx) (isexp fx) (isAexp fx x) (isAtanform fx x)) )
+           (let ((fact2 (divide-factors factors (factorize `(* ,fx ,(differentiate (cadr fx) x))))))
+             (if (notContainsVariable fact2 x)
+                 `(* ,(integrateFromTable fx x) ,(makeProductOfFactors fact2))))))))
+ 
+
+
+;; TODO : Need to simplify expressions
+(defun simplify (expr)
+  (cond 
+    ((isAdd expr)
+     (cond ((eq (simplify (cadr expr)) (simplify (caddr expr))) (list '* (simplify (cadr expr)) 2))
+           ((numberp (simplify (cadr expr))))))))
+  
+;; The following functions are inspired from the book Paradigms of Artificial Intelligence Programming on Artificial Intelligence.
+(defun factorize (expression)
+  "Return a list of the factors of exp^n,
+  where each factor is of the form (^ y n)."
+  (let ((factors nil)
+        (constant 1))
+    (labels
+      ((fac (x n)
+         (cond
+           ((numberp x) (setf constant (* constant (expt x n))))
+           ((beginsWith x '*)
+                (fac (cadr x) n)
+                (fac (caddr x) n)
+           )
+           ((beginsWith x '/)
+                (fac (cadr x) n)
+                (fac (caddr x) (- n))
+                
+                )
+           ((and (beginsWith x '-) (and (consp (cdr x)) (null (rest (cdr x)))))
+                (setf constant (- constant))
+                (fac (cadr x) n)
+           )
+           ((and (beginsWith x '^) (numberp (caddr x)))
+            (fac (cadr x) (* n (caddr x))))
+           (t (let ((factor (find x factors :key #'cadr :test #'equal)))
+                (if factor
+                    (incf (caddr factor) n)
+                    (push `(^ ,x ,n) factors)))))))
+      
+      (fac expression 1)
+      (case constant
+        (0 '((^ 0 1)))
+        (1 factors)
+        (t `((^ ,constant 1) .,factors))))))
+        
+
 (defun divide-factors (numer denom)
   "Divide a list of factors by another, producing a third."
   (let ((result (mapcar #'copy-list numer)))
@@ -562,11 +569,4 @@
             (decf (caddr factor) (caddr d))
             (push `(^ ,(cadr d) ,(- (caddr d))) result))))
     (delete 0 result :key #'caddr)))
-
-;; TODO : Need to simplify expressions
-(defun simplify (expr)
-  (cond 
-    ((isAdd expr)
-     (cond ((eq (simplify (cadr expr)) (simplify (caddr expr))) (list '* (simplify (cadr expr)) 2))
-           ((numberp (simplify (cadr expr))))))))
 
