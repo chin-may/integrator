@@ -165,22 +165,22 @@
 
 (defun handleExp (expr dvar)
   (cond
-    ((eq dvar (caddr expr) )
-     `(_ e ,dvar)
+    ((eq dvar (cadr expr) )
+     `(expo ,dvar)
      )
-    ((isAx (caddr expr) dvar)
-     (make-div `(_ e ,(caddr expr))  (getA (caddr expr) dvar))
+    ((isAx (cadr expr) dvar)
+     (make-div `(expo ,(cadr expr))  (getA (cadr expr) dvar))
      )
-    ((isXb (caddr expr) dvar)
-     `(_ e , (caddr expr))
+    ((isXb (cadr expr) dvar)
+     `(expo , (caddr expr))
      )
-    ((isAxb (caddr expr) dvar)
-     (make-div `(_ e ,(caddr expr))  (getA (caddr expr) dvar))
+    ((isAxb (cadr expr) dvar)
+     (make-div `(expo ,(cadr expr))  (getA (cadr expr) dvar))
      )
-    ((or (isXbyA (caddr expr) dvar) (isXbyAplusb (caddr expr) dvar))
-     (make-prod `(_ e ,(caddr expr))  (getA (caddr expr) dvar))
+    ((or (isXbyA (cadr expr) dvar) (isXbyAplusb (cadr expr) dvar))
+     (make-prod `(expo ,(cadr expr))  (getA (cadr expr) dvar))
      )
-    (T `(_ e ,expr))
+    (T `(expo ,expr))
     )
   )
 
@@ -301,7 +301,9 @@
 
 (defun isExp (expr)
   (if (atom expr) nil
-  (and (eq (car expr) '_) (eq (cadr expr) 'e))))
+     (eq (car expr) 'expo)
+    )
+  )
 
 (defun isAExp (expr dvar)
   (if (atom expr) nil
