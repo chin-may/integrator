@@ -17,8 +17,7 @@
        (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
        ;; Now integrate and return
-       (identity
-         `(* 
+       `(* 
              ,(unfactorize const-factors)                   
              
              ,(cond ((null x-factors) dvar)                     ;; If there are no factors containing variable return var
@@ -38,8 +37,8 @@
                                   (make-prod 
                                     (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
                          ))
-                   
-                    (t `(INTEGRATE ,(unfactorize x-factors) ,dvar)))))))
+                   c
+                    (t `(INTEGRATE ,(unfactorize x-factors) ,dvar))))))
     )
   )
  
