@@ -37,7 +37,7 @@
                                   (make-prod 
                                     (integrate (cadr expr) dvar) (differentiate (caddr expr) dvar)) dvar)))
                          ))
-                   c
+                   
                     (t `(INTEGRATE ,(unfactorize x-factors) ,dvar))))))
     )
   )
