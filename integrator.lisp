@@ -40,7 +40,7 @@
 
                                           )
                                      )
-                                 (if (findnil iuv)
+                                 (if (or (find 'integrate iuv) (findnil iuv))
                                    (make-sub
                                      (make-prod (cadr expr) (integrate (caddr expr) dvar))
                                      (integrate 
