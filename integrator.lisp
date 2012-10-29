@@ -209,18 +209,6 @@
     )
   )
   
-
-(defun partition-if (pred lst)
-"Return 2 values: elements of list that satisfy pred,
-  and elements that don't."
-  (let ((yes-list nil)
-        (no-list nil))
-    (dolist (item lst)
-      (if (funcall pred item)
-          (push item yes-list)
-          (push item no-list)))
-    (values (nreverse yes-list) (nreverse no-list))))
-
 (defun isAx (expr dvar)
   (if (atom expr)
     nil
@@ -524,9 +512,9 @@
            ((numberp (simplify (cadr expr))))))))
   
 ;; The following functions are inspired from the book Paradigms of Artificial Intelligence Programming on Artificial Intelligence.
+
+;;Return a list of the factors of expression^n,  where each factor is of the form (^ y n).
 (defun factorize (expression)
-  "Return a list of the factors of exp^n,
-  where each factor is of the form (^ y n)."
   (let ((factors nil)
         (constant 1))
     (labels
@@ -548,6 +536,7 @@
            )
            ((and (beginsWith x '^) (numberp (caddr x)))
             (fac (cadr x) (* n (caddr x))))
+            
            (t (let ((factor (find x factors :key #'cadr :test #'equal)))
                 (if factor
                     (incf (caddr factor) n)
@@ -559,9 +548,9 @@
         (1 factors)
         (t `((^ ,constant 1) .,factors))))))
         
-
+;; Divide a list of factors by another, producing a third.
+ 
 (defun divide-factors (numer denom)
-  "Divide a list of factors by another, producing a third."
   (let ((result (mapcar #'copy-list numer)))
     (dolist (d denom)
       (let ((factor (find (cadr d) result :key #'cadr :test #'equal)))
@@ -569,4 +558,14 @@
             (decf (caddr factor) (caddr d))
             (push `(^ ,(cadr d) ,(- (caddr d))) result))))
     (delete 0 result :key #'caddr)))
+
+;;Partitions it into 2 lists - One that satisfies the pred and one that does not!
+(defun partition-if (pred lst)
+ (let ((yes-list nil)
+        (no-list nil))
+    (dolist (item lst)
+      (if (funcall pred item)
+          (push item yes-list)
+          (push item no-list)))
+    (values (nreverse yes-list) (nreverse no-list))))
 
