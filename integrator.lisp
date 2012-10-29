@@ -17,7 +17,7 @@
        (partition-if #'(lambda (factor) (notContainsVariable factor dvar))
                        (factorize expr))
        ;; Now integrate and return
-       (identity 
+       (identity
          `(* 
              ,(unfactorize const-factors)                   
              
@@ -441,8 +441,7 @@
 (defun starts-with ( lst x )
     ( and (consp lst ) (eql (first lst) x )))
 
-;; This factorization function is based on PAIP as referred to in my 
-;; 
+;; This factorization function is based on PAIP.
 (defun factorize (expression)
   "Return a list of the factors of exp^n,
   where each factor is of the form (^ y n)."
